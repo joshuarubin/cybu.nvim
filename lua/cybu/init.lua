@@ -134,23 +134,42 @@ vim.api.nvim_create_autocmd("BufDelete", {
   callback = history_delete,
 })
 
+local function set_buf(new_index)
+  if new_index < 1 or #vim.w.history < new_index then
+    return true
+  end
+
+  local bufnr = vim.w.history[new_index]
+  if not vim.api.nvim_buf_is_valid(bufnr) then
+    history_delete({ buf = bufnr })
+    return false
+  end
+
+  vim.w.history_index = new_index
+
+  history_disabled = true
+  vim.api.nvim_win_set_buf(0, bufnr)
+  history_disabled = false
+
+  return true
+end
+
 cybu.load_target_buf = function(direction)
-  if direction == v.direction.next then
-    if vim.w.history_index < #vim.w.history then
-      vim.w.history_index = vim.w.history_index + 1
-      history_disabled = true
-      vim.api.nvim_win_set_buf(0, vim.w.history[vim.w.history_index])
-      history_disabled = false
+  while true do
+    local idx
+
+    if direction == v.direction.next then
+      idx = vim.w.history_index + 1
+    elseif direction == v.direction.prev then
+      idx = vim.w.history_index - 1
+    else
+      error("Invalid argument: '" .. direction .. "'. Allowed: " .. vim.inspect(v.direction))
+      return
     end
-  elseif direction == v.direction.prev then
-    if vim.w.history_index > 1 then
-      vim.w.history_index = vim.w.history_index - 1
-      history_disabled = true
-      vim.api.nvim_win_set_buf(0, vim.w.history[vim.w.history_index])
-      history_disabled = false
+
+    if set_buf(idx) then
+      break
     end
-  else
-    error("Invalid argument: '" .. direction .. "'. Allowed: " .. vim.inspect(v.direction))
   end
 end
 
