@@ -24,9 +24,20 @@ cybu.get_bufs = function()
   history = vim.fn.filter(history, "buflisted(v:val) == 1")
   history = vim.fn.uniq(history)
   for _, id in ipairs(history) do
+    local name
+    if vim.api.nvim_buf_get_option(id, "buftype") == "nofile" and not vim.api.nvim_buf_get_option(id, "swapfile") then
+      name = "[Scratch]"
+    else
+      name = vim.fn.bufname(id)
+    end
+
+    if name == nil or name == "" then
+      name = "[No Name]"
+    end
+
     table.insert(bufs, {
       id = id,
-      name = vim.fn.bufname(id),
+      name = name,
     })
   end
 
@@ -412,7 +423,7 @@ end
 cybu.cycle = function(direction)
   vim.validate({ direction = { direction, "string", false } })
   local filetype = vim.api.nvim_buf_get_option(vim.api.nvim_get_current_buf(), "filetype")
-  if vim.tbl_contains(c.opts.exclude, filetype) then
+  if vim.tbl_contains(c.opts.exclude, filetype) or not vim.bo.buflisted then
     return c.opts.fallback and c.opts.fallback()
   end
   cybu.load_target_buf(direction)
